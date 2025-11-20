@@ -5,10 +5,40 @@
 #include "led_strip.h"
 #include "iot_button.h"
 #include "button_adc.h"
+static led_strip_handle_t led_strip = NULL;
+
+// 定义一个颜色结构
+typedef struct {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} color_t;
+
+// 预设几个颜色，按键1每次按下循环切换
+static const color_t s_colors[] = {
+    {255,   0,   0},  // 0  红
+    {255, 128,   0},  // 1  橙
+    {255, 255,   0},  // 2  黄
+    {128, 255,   0},  // 3  黄绿
+    {0,   255,   0},  // 4  绿
+    {0,   255, 128},  // 5  蓝绿
+    {0,   255, 255},  // 6  青
+    {0,   128, 255},  // 7  天蓝
+    {0,     0, 255},  // 8  蓝
+    {128,   0, 255},  // 9  紫蓝
+    {255,   0, 255},  // 10 紫
+    {255,   0, 128},  // 11 粉
+    {255,  64,  64},  // 12 浅红
+    {255, 150,  80},  // 13 肉色/暖色
+    {200, 200, 200},  // 14 灰白
+    {255, 255, 255},  // 15 白
+};
+
+static const size_t s_color_num = sizeof(s_colors) / sizeof(s_colors[0]);
+static size_t s_color_idx = 0;    // 当前颜色下标
 
 static const char *TAG = "ADC_BUTTON_TEST";
 
-static led_strip_handle_t led_strip = NULL;
 
 // 按键事件回调
 static void button_event_cb(void *arg, void *data)
@@ -21,8 +51,12 @@ static void button_event_cb(void *arg, void *data)
         
         if (btn_id == 0) {
             // 按键1：点亮灯
-            led_strip_set_pixel(led_strip, 0, 0, 0, 255);  // 蓝灯
-            led_strip_set_pixel(led_strip, 1, 0, 255, 0);  // 绿灯
+            // led_strip_set_pixel(led_strip, 0, 0, 0, 255);  // 蓝灯
+            // led_strip_set_pixel(led_strip, 1, 0, 255, 0);  // 绿灯
+            // led_strip_refresh(led_strip);
+            const color_t *c = &s_colors[s_color_idx++ % s_color_num];
+            led_strip_set_pixel(led_strip, 0, c->r, c->g, c->b);
+            led_strip_set_pixel(led_strip, 1, c->r, c->g, c->b);
             led_strip_refresh(led_strip);
         } else if (btn_id == 1) {
             // 按键2：熄灭灯
