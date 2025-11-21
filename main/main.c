@@ -33,9 +33,10 @@ static void button_callback(void *button_handle, void *usr_data){
 void app_main(void)
 {
     bsp_board_t *board = bsp_board_get_instance();
+    bsp_board_nvs_init(board);
     bsp_board_led_init(board);
     bsp_board_button_init(board);
-    bsp_board_nvs_init(board);
+    bsp_board_wifi_init(board);
     if (bsp_board_check_status(board, BSP_BOARD_BUTTON_BIT|BSP_BOARD_NVS_BIT|BSP_BOARD_LED_BIT, portMAX_DELAY))
     {
         ESP_LOGI(TAG, "Board initialized successfully.");
