@@ -1,4 +1,4 @@
-
 dependencies:
   led_strip: ^3
   button: ^4
+  espressif/qrcode: ^0.1.0
