@@ -36,8 +36,9 @@ void app_main(void)
     bsp_board_nvs_init(board);
     bsp_board_led_init(board);
     bsp_board_button_init(board);
-    bsp_board_wifi_init(board);
-    if (bsp_board_check_status(board, BSP_BOARD_BUTTON_BIT|BSP_BOARD_NVS_BIT|BSP_BOARD_LED_BIT, portMAX_DELAY))
+   // bsp_board_wifi_init(board);
+    bsp_board_codec_init(board);
+    if (bsp_board_check_status(board, BSP_BOARD_BUTTON_BIT|BSP_BOARD_CODEC_BIT|BSP_BOARD_LED_BIT|BSP_BOARD_CODEC_BIT, portMAX_DELAY))
     {
         ESP_LOGI(TAG, "Board initialized successfully.");
     }else{
@@ -46,8 +47,20 @@ void app_main(void)
     //注册按键回调
     iot_button_register_cb(board->front_button, BUTTON_SINGLE_CLICK,NULL,button_callback,NULL);
     iot_button_register_cb(board->front_button, BUTTON_DOUBLE_CLICK ,NULL,button_callback,NULL);
-    // 主任务空转
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
+     // 打开音频设备
+    esp_codec_dev_set_out_vol(board->codec_dev, 60);
+    esp_codec_dev_set_in_gain(board->codec_dev, 20);
+    esp_codec_dev_sample_info_t sample_info = {
+        .bits_per_sample = CODEC_BIT_WIDTH,
+        .sample_rate = CODEC_SAMPLE_RATE,
+        .channel = 1,
+    };
+    esp_codec_dev_open(board->codec_dev, &sample_info);
+
+    uint8_t *buf = malloc(1024);
+    while (1)
+    {
+        esp_codec_dev_read(board->codec_dev, buf, 1024);
+        esp_codec_dev_write(board->codec_dev, buf, 1024);
     }
 }
