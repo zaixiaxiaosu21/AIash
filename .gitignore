@@ -5,3 +5,4 @@ sdkconfig.old
 .clangd
 managed_components/
 dependencies.lock
+.accelerate

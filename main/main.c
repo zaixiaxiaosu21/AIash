@@ -38,7 +38,8 @@ void app_main(void)
     bsp_board_button_init(board);
    // bsp_board_wifi_init(board);
     bsp_board_codec_init(board);
-    if (bsp_board_check_status(board, BSP_BOARD_BUTTON_BIT|BSP_BOARD_CODEC_BIT|BSP_BOARD_LED_BIT|BSP_BOARD_CODEC_BIT, portMAX_DELAY))
+    bsp_board_lcd_init(board);
+    if (bsp_board_check_status(board, BSP_BOARD_BUTTON_BIT|BSP_BOARD_CODEC_BIT|BSP_BOARD_LED_BIT|BSP_BOARD_LCD_BIT, portMAX_DELAY))
     {
         ESP_LOGI(TAG, "Board initialized successfully.");
     }else{

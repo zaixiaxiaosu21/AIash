@@ -15,3 +15,10 @@
 #define CODEC_DOUT_PIN 6
 #define CODEC_SAMPLE_RATE 16000
 #define CODEC_BIT_WIDTH 16
+
+#define LCD_PIN_MOSI           48
+#define LCD_PIN_PCLK           47
+#define LCD_PIN_CS             21
+#define LCD_PIN_DC             45
+#define LCD_PIN_RST            16
+#define LCD_PIN_BK_LIGHT       40
