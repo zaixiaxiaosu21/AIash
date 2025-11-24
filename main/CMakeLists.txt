@@ -5,4 +5,6 @@ idf_component_register(SRCS "main.c"
                        "bsp/bsp_board_wifi.c"
                        "bsp/bsp_board_codec.c"
                        "bsp/bsp_board_lcd.c"
+                       "audio/audio_encoder.c"
+                       "audio/audio_decoder.c"
                     INCLUDE_DIRS ".")
