@@ -71,7 +71,7 @@ void bsp_board_wifi_init(bsp_board_t *board){
     ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
      // 检查是否已经配网
     bool provisioned = false;
-   // wifi_prov_mgr_reset_provisioning();
+    //wifi_prov_mgr_reset_provisioning();
     ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
     if (!provisioned)
     {

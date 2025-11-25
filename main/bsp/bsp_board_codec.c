@@ -54,8 +54,9 @@ void bsp_board_codec_init(bsp_board_t *board){
         .codec_mode = ESP_CODEC_DEV_WORK_MODE_BOTH,
         .pa_pin = CODEC_PA_PIN, 
         .use_mclk = true,
+        .no_dac_ref = false,//回声消除需要右通道有数据
     };
-    audio_codec_if_t *codec_if =es8311_codec_new(&es8311_cfg);
+  const  audio_codec_if_t *codec_if =es8311_codec_new(&es8311_cfg);
     i2s_chan_handle_t rx_handle = NULL;
     i2s_chan_handle_t tx_handle = NULL;
     bsp_board_codec_i2s_init(board, &rx_handle, &tx_handle);

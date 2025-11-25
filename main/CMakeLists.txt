@@ -7,4 +7,5 @@ idf_component_register(SRCS "main.c"
                        "bsp/bsp_board_lcd.c"
                        "audio/audio_encoder.c"
                        "audio/audio_decoder.c"
+                       "audio/audio_sr.c"
                     INCLUDE_DIRS ".")
