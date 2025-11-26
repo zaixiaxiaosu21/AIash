@@ -8,4 +8,5 @@ idf_component_register(SRCS "main.c"
                        "audio/audio_encoder.c"
                        "audio/audio_decoder.c"
                        "audio/audio_sr.c"
+                       "audio/audio_process.c"
                     INCLUDE_DIRS ".")

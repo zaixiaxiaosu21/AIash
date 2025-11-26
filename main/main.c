@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include "bsp/bsp_board.h"
-#include "audio/audio_encoder.h"
-#include "audio/audio_decoder.h"
-#include "audio/audio_sr.h"
+#include "audio/audio_process.h"
 #include "esp_log.h"
 #define  TAG "main"
 void audio_sr_callback(void* event_handler_arg,
@@ -28,19 +26,7 @@ void audio_sr_callback(void* event_handler_arg,
 
 }
 
-void audio_output_task(void *arg){
-    RingbufHandle_t output =(RingbufHandle_t )arg;
-    bsp_board_t *board = bsp_board_get_instance();
-    while(1){
-         size_t size = 0;
-        void*buffer=  xRingbufferReceiveUpTo(output,&size, portTICK_PERIOD_MS,2048);
-        if(buffer==NULL){
-            continue;
-        }
-        esp_codec_dev_write(board->codec_dev, buffer, size);
-        vRingbufferReturnItem(output, buffer);
-    }
-}
+
 static void button_callback(void *button_handle, void *usr_data){
             bsp_board_t *board = bsp_board_get_instance();
             if (button_handle!=board->front_button)
@@ -96,24 +82,21 @@ void app_main(void)
         .channel = 2,
     };
     esp_codec_dev_open(board->codec_dev, &sample_info);
-
-    //测试音频编解码，创建输入 中转 输出缓冲区
-    RingbufHandle_t input = xRingbufferCreate(16384, RINGBUF_TYPE_BYTEBUF);
-    RingbufHandle_t mid = xRingbufferCreate(2048, RINGBUF_TYPE_NOSPLIT);
-    RingbufHandle_t output = xRingbufferCreate(16384*2, RINGBUF_TYPE_BYTEBUF);
-
-     audio_sr_t *sr = audio_sr_create(input); //创建语音识别模块
-    audio_sr_start(sr); //启动语音识别模块
-    audio_sr_register_callback(sr, AUDIO_SR_EVENT_SPEECH, audio_sr_callback, sr);
-    audio_sr_register_callback(sr, AUDIO_SR_EVENT_SILENCE, audio_sr_callback, sr);
-    audio_sr_register_callback(sr, AUDIO_SR_EVENT_WAKEUP, audio_sr_callback, sr);
-    //创建音频编解码任务
-    audio_encoder_t *encoder = audio_encoder_create(input, mid, CODEC_SAMPLE_RATE, CODEC_BIT_WIDTH, 1);
-    audio_decoder_t *decoder = audio_decoder_create(mid, output, CODEC_SAMPLE_RATE, 2);
-    audio_encoder_start(encoder);
-    audio_decoder_start(decoder);
-    //创建输出任务
-    
-    xTaskCreate(audio_output_task, "audio_output_task", 4096, output, 6, NULL);
-   
+    // 创建音频处理器
+    audio_processor_t *processor = audio_processor_create();
+    // 注册语音识别回调
+    audio_processor_register_callback(processor, AUDIO_SR_EVENT_WAKEUP, audio_sr_callback, NULL);
+    audio_processor_register_callback(processor, AUDIO_SR_EVENT_SPEECH, audio_sr_callback, NULL);
+    audio_processor_register_callback(processor, AUDIO_SR_EVENT_SILENCE, audio_sr_callback, NULL);
+    // 启动音频处理器
+    audio_processor_start(processor);
+    void *buffer=malloc(300);
+    while (1)
+    {
+      size_t size=  audio_processor_read(processor, buffer, 300);
+      audio_processor_write(processor, buffer, size);
+    }
+    free(buffer);
+    audio_processor_stop(processor);
+    audio_processor_destroy(processor);
 }
