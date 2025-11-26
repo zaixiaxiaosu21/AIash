@@ -45,3 +45,4 @@ void bsp_board_codec_init(bsp_board_t *board);
 void bsp_board_lcd_init(bsp_board_t *board);
 
 bool bsp_board_check_status(bsp_board_t *board, EventBits_t status_bit, uint32_t timeout_ms);
+void lvgl_init_and_demo(bsp_board_t *board);

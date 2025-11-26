@@ -2,7 +2,9 @@
 #include "bsp/bsp_board.h"
 #include "audio/audio_process.h"
 #include "esp_log.h"
+
 #define  TAG "main"
+
 void audio_sr_callback(void* event_handler_arg,
                                     esp_event_base_t event_base,
                                     int32_t event_id,
@@ -64,6 +66,7 @@ void app_main(void)
    // bsp_board_wifi_init(board);
     bsp_board_codec_init(board);
     bsp_board_lcd_init(board);
+    lvgl_init_and_demo(board);
     if (bsp_board_check_status(board, BSP_BOARD_BUTTON_BIT|BSP_BOARD_CODEC_BIT|BSP_BOARD_LED_BIT|BSP_BOARD_LCD_BIT, portMAX_DELAY))
     {
         ESP_LOGI(TAG, "Board initialized successfully.");
@@ -96,7 +99,5 @@ void app_main(void)
       size_t size=  audio_processor_read(processor, buffer, 300);
       audio_processor_write(processor, buffer, size);
     }
-    free(buffer);
-    audio_processor_stop(processor);
-    audio_processor_destroy(processor);
+    
 }
