@@ -21,7 +21,7 @@ static void bsp_board_bk_init(bsp_board_t *board){
         .intr_type = GPIO_INTR_DISABLE,
  };
    ESP_ERROR_CHECK(gpio_config(&bk_config));
-   ESP_ERROR_CHECK(gpio_set_level(LCD_PIN_BK_LIGHT, 1));// 打开背光
+   ESP_ERROR_CHECK(gpio_set_level(LCD_PIN_BK_LIGHT, 0));// 关闭背光
 }
 static void bsp_board_spi_init(bsp_board_t *board){
        spi_bus_config_t bus_config = {
@@ -79,22 +79,46 @@ void bsp_board_lcd_init(bsp_board_t *board)
     xEventGroupSetBits(board->board_status, BSP_BOARD_LCD_BIT);
 
     // 开启LCD
-    esp_lcd_panel_disp_on_off(board->lcd_panel, true);
+    esp_lcd_panel_disp_on_off(board->lcd_panel, false);
 
+}
+
+ static void slider_event_cb(lv_event_t * e)
+{
+    lv_obj_t * slider = lv_event_get_target(e);
+    lv_obj_t * label  = lv_event_get_user_data(e);
+
+    int32_t v = lv_slider_get_value(slider);
+
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%d", (int)v);
+    lv_label_set_text(label, buf);
+}
+static void btn_event_cb(lv_event_t * e)
+{
+    static bool toggled = false;
+    lv_obj_t *btn   = lv_event_get_target(e);
+    lv_obj_t *label = lv_obj_get_child(btn, 0);
+
+    if(!toggled) {
+        lv_label_set_text(label, "Clicked!");
+    } else {
+        lv_label_set_text(label, "Click me");
+    }
+    toggled = !toggled;
 }
 
  void lvgl_init_and_demo(bsp_board_t *board)
 {
-    // 1. 初始化 LVGL 端口（创建 LVGL 任务、互斥锁等）
+    // 1. 初始化 LVGL port（你之前已经有这段）
     lvgl_port_cfg_t lvgl_cfg = ESP_LVGL_PORT_INIT_CONFIG();
     ESP_ERROR_CHECK(lvgl_port_init(&lvgl_cfg));
 
-    // 2. 把你已经有的 lcd_io / lcd_panel 挂给 LVGL
     const lvgl_port_display_cfg_t disp_cfg = {
         .io_handle     = board->lcd_io,
         .panel_handle  = board->lcd_panel,
         .buffer_size   = BSP_LCD_H_RES * BSP_LCD_DRAW_BUF_HEIGHT,  // 240 * 40
-        .double_buffer = true,         // 有内存就开，刷新更顺滑
+        .double_buffer = true,
 
         .hres          = BSP_LCD_H_RES,   // 240
         .vres          = BSP_LCD_V_RES,   // 320
@@ -107,20 +131,61 @@ void bsp_board_lcd_init(bsp_board_t *board)
         },
 
         .flags = {
-            .buff_dma    = true,    // 显存放片内 RAM + DMA
-            .buff_spiram = false,   // 暂时先不用 PSRAM
+            .buff_dma    = true,
+            .buff_spiram = false,
         },
     };
 
     lv_display_t *disp = lvgl_port_add_disp(&disp_cfg);
-    (void)disp; // 暂时不用，防止未使用警告
+    (void)disp;
 
-    // 3. 创建一个简单的 LVGL 标签
+    // 2. 取当前屏幕
 #if LVGL_VERSION_MAJOR >= 9
-    lv_obj_t *label = lv_label_create(lv_screen_active());
+    lv_obj_t *scr = lv_screen_active();
 #else
-    lv_obj_t *label = lv_label_create(lv_scr_act());
+    lv_obj_t *scr = lv_scr_act();
 #endif
-    lv_label_set_text(label, "Hello LVGL 240x320!");
-    lv_obj_center(label);
+
+    // 可以让整个屏幕用列布局，看起来更整齐
+    lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(scr,
+                          LV_FLEX_ALIGN_CENTER,   // 主轴居中
+                          LV_FLEX_ALIGN_CENTER,   // 交叉轴居中
+                          LV_FLEX_ALIGN_CENTER);  // 行内对齐
+
+    // 3. 顶部标题
+    lv_obj_t *title = lv_label_create(scr);
+    lv_label_set_text(title, "ESP32-S3 + LVGL");
+    lv_obj_set_style_text_font(title, LV_FONT_DEFAULT, 0);
+
+    // 4. 一个按钮 + 按钮上的文字
+    lv_obj_t *btn = lv_btn_create(scr);
+    lv_obj_set_size(btn, 120, 40);
+    lv_obj_t *btn_label = lv_label_create(btn);
+    lv_label_set_text(btn_label, "Click me");
+    lv_obj_center(btn_label);
+
+    // 给按钮加个简单事件：点击变文字
+    lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_CLICKED, NULL);
+    
+
+    // 5. 一个滑条 + 数值显示
+    lv_obj_t *slider = lv_slider_create(scr);
+    lv_obj_set_width(slider, 180);
+    lv_slider_set_range(slider, 0, 100);
+    lv_slider_set_value(slider, 30, LV_ANIM_OFF);
+
+    lv_obj_t *slider_label = lv_label_create(scr);
+    lv_label_set_text(slider_label, "30");
+
+    // 滑动时更新数字
+    lv_obj_add_event_cb(slider, slider_event_cb, LV_EVENT_VALUE_CHANGED, slider_label);
+
+    // 6. 一个彩色条块，当“装饰”
+    lv_obj_t *color_bar = lv_obj_create(scr);
+    lv_obj_set_size(color_bar, 200, 40);
+    lv_obj_set_style_bg_color(color_bar, lv_color_hex(0x00AAFF), 0);
+    lv_obj_set_style_radius(color_bar, 8, 0);
+    lv_obj_set_style_border_width(color_bar, 0, 0);
 }
+

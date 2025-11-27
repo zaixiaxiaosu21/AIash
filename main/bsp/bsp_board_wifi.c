@@ -62,6 +62,10 @@ void bsp_board_wifi_init(bsp_board_t *board){
          ESP_EVENT_ANY_ID, event_handler, board, NULL));
     //创建wifitask
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+
+    uint8_t eth_mac[6];
+    esp_wifi_get_mac(ESP_IF_WIFI_STA, eth_mac);
+    sprintf(board->mac, "%02x:%02x:%02x:%02x:%02x:%02x", eth_mac[0], eth_mac[1], eth_mac[2], eth_mac[3], eth_mac[4], eth_mac[5]);
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
       // 初始化配网manager
     wifi_prov_mgr_config_t config = {
@@ -71,7 +75,7 @@ void bsp_board_wifi_init(bsp_board_t *board){
     ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
      // 检查是否已经配网
     bool provisioned = false;
-    //wifi_prov_mgr_reset_provisioning();
+   // wifi_prov_mgr_reset_provisioning();
     ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
     if (!provisioned)
     {
@@ -102,5 +106,15 @@ void bsp_board_wifi_init(bsp_board_t *board){
             ESP_ERROR_CHECK(esp_wifi_start());
         }
 
+}
+int bsp_board_wifi_get_rssi(bsp_board_t *board){
+    //获取wifi信号强度
+    int rssi =0;
+   esp_err_t res= esp_wifi_sta_get_rssi(&rssi);
+    if (res != ESP_OK){
+         ESP_LOGE(TAG, "Failed to get RSSI: %s", esp_err_to_name(res));
+         return 0;
+    }
+   return rssi;
 }
 

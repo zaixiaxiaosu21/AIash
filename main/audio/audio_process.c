@@ -28,7 +28,7 @@ void audio_output_task(void *arg){
     bsp_board_t *board = bsp_board_get_instance();
     while(processor->is_running){
          size_t size = 0;
-        void*buffer=  xRingbufferReceiveUpTo(processor->dec_output,&size, pdMS_TO_TICKS(10),2048);
+        void*buffer=  xRingbufferReceiveUpTo(processor->dec_output,&size, pdMS_TO_TICKS(100),2048);
         if(buffer==NULL){
             continue;
         }
@@ -42,7 +42,7 @@ audio_processor_t *audio_processor_create(void){
     processor->enc_input = xRingbufferCreateWithCaps(16384, RINGBUF_TYPE_BYTEBUF, MALLOC_CAP_SPIRAM);
     processor->enc_output = xRingbufferCreateWithCaps(4096, RINGBUF_TYPE_NOSPLIT, MALLOC_CAP_SPIRAM);
     processor->dec_input = xRingbufferCreateWithCaps(4096, RINGBUF_TYPE_NOSPLIT, MALLOC_CAP_SPIRAM);
-    processor->dec_output = xRingbufferCreateWithCaps(16384*2.5, RINGBUF_TYPE_BYTEBUF, MALLOC_CAP_SPIRAM);
+    processor->dec_output = xRingbufferCreateWithCaps(32768, RINGBUF_TYPE_BYTEBUF, MALLOC_CAP_SPIRAM);
 
     processor->encoder = audio_encoder_create(processor->enc_input, processor->enc_output, CODEC_SAMPLE_RATE, CODEC_BIT_WIDTH, 1);
     processor->decoder = audio_decoder_create(processor->dec_input, processor->dec_output, CODEC_SAMPLE_RATE, 2);

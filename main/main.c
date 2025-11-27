@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "bsp/bsp_board.h"
 #include "audio/audio_process.h"
+#include "protocol/ota.h"
 #include "esp_log.h"
 
 #define  TAG "main"
@@ -63,11 +64,11 @@ void app_main(void)
     bsp_board_nvs_init(board);
     bsp_board_led_init(board);
     bsp_board_button_init(board);
-   // bsp_board_wifi_init(board);
+    bsp_board_wifi_init(board);
     bsp_board_codec_init(board);
     bsp_board_lcd_init(board);
     lvgl_init_and_demo(board);
-    if (bsp_board_check_status(board, BSP_BOARD_BUTTON_BIT|BSP_BOARD_CODEC_BIT|BSP_BOARD_LED_BIT|BSP_BOARD_LCD_BIT, portMAX_DELAY))
+    if (bsp_board_check_status(board, BSP_BOARD_BUTTON_BIT|BSP_BOARD_CODEC_BIT|BSP_BOARD_LED_BIT|BSP_BOARD_LCD_BIT|BSP_BOARD_WIFI_BIT, portMAX_DELAY))
     {
         ESP_LOGI(TAG, "Board initialized successfully.");
     }else{
@@ -85,19 +86,36 @@ void app_main(void)
         .channel = 2,
     };
     esp_codec_dev_open(board->codec_dev, &sample_info);
-    // 创建音频处理器
-    audio_processor_t *processor = audio_processor_create();
-    // 注册语音识别回调
-    audio_processor_register_callback(processor, AUDIO_SR_EVENT_WAKEUP, audio_sr_callback, NULL);
-    audio_processor_register_callback(processor, AUDIO_SR_EVENT_SPEECH, audio_sr_callback, NULL);
-    audio_processor_register_callback(processor, AUDIO_SR_EVENT_SILENCE, audio_sr_callback, NULL);
-    // 启动音频处理器
-    audio_processor_start(processor);
-    void *buffer=malloc(300);
-    while (1)
+    // // 创建音频处理器
+    // audio_processor_t *processor = audio_processor_create();
+    // // 注册语音识别回调
+    // audio_processor_register_callback(processor, AUDIO_SR_EVENT_WAKEUP, audio_sr_callback, NULL);
+    // audio_processor_register_callback(processor, AUDIO_SR_EVENT_SPEECH, audio_sr_callback, NULL);
+    // audio_processor_register_callback(processor, AUDIO_SR_EVENT_SILENCE, audio_sr_callback, NULL);
+    // // 启动音频处理器
+    // audio_processor_start(processor);
+    // void *buffer=malloc(300);
+    // while (1)
+    // {
+    //   size_t size=  audio_processor_read(processor, buffer, 300);
+    //   audio_processor_write(processor, buffer, size);
+    // }
+    ota_t *ota = ota_create();
+    ota_process(ota);
+
+    if (ota->activation_code)
     {
-      size_t size=  audio_processor_read(processor, buffer, 300);
-      audio_processor_write(processor, buffer, size);
+        ESP_LOGI(TAG, "Code: %s", ota->activation_code);
     }
+    if (ota->websocket_token)
+    {
+        ESP_LOGI(TAG, "Token: %s", ota->websocket_token);
+    }
+    if (ota->websocket_url)
+    {
+        ESP_LOGI(TAG, "URL: %s", ota->websocket_url);
+    }
+
+    ota_destroy(ota);
     
 }
