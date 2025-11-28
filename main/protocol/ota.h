@@ -1,5 +1,5 @@
 #pragma once
-#define OTA_URL "https://api.tenclass.net/xiaozhi/ota"
+#define OTA_URL "https://api.tenclass.net/xiaozhi/ota/"
 typedef struct ota{
     char *activation_code;
     char *websocket_url;

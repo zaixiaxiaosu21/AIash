@@ -5,8 +5,11 @@
 #include "bsp/bsp_board.h"
 #include "esp_log.h"
 #include <stdio.h>
-#include "cJSON.h"       // 新增：用于解析服务器下行 JSON
+#include "cJSON.h"
+
 #define TAG "Protocol"
+#define EVENT_BASE "PROTOCOL_EVENT"
+
 #define protocol_send_text(protocol, fmtstr, ...)                                                 \
     do                                                                                            \
     {                                                                                             \
@@ -20,166 +23,192 @@
         esp_websocket_client_send_text(protocol->ws_client, _text, strlen(_text), portMAX_DELAY); \
         free(_text);                                                                              \
     } while (0)
- struct protocol
+
+struct protocol
 {
     esp_websocket_client_handle_t ws_client;
     char *session_id;
 
     esp_event_handler_t callback;
     void *callback_arg;
-} ;
-/* 小工具：统一分发事件给上层 */
-static void protocol_dispatch_event(protocol_t *protocol,
-                                    protocol_event_t event,
-                                    void *event_data)
+};
+
+static void protocol_hello_handler(protocol_t *protocol, cJSON *root)
 {
-    if (protocol->callback) {
-        // base 这里用 NULL，event_id 用我们自己的枚举
-        protocol->callback(protocol->callback_arg, NULL, event, event_data);
+    // 从JSON中获取session_id
+    cJSON *session_id = cJSON_GetObjectItem(root, "session_id");
+    if (!cJSON_IsString(session_id))
+    {
+        ESP_LOGE(TAG, "session_id is not a string");
+        return;
+    }
+    free(protocol->session_id);
+    protocol->session_id = strdup(session_id->valuestring);
+    // 调用回调函数
+    protocol->callback(protocol->callback_arg, EVENT_BASE, PROTOCOL_EVENT_HELLO, NULL);
+}
+static void protocol_stt_handler(protocol_t *protocol, cJSON *root)
+{
+    // 解析text
+    cJSON *text = cJSON_GetObjectItem(root, "text");
+    if (!cJSON_IsString(text))
+    {
+        ESP_LOGW(TAG, "text is not a string");
+        return;
+    }
+    protocol->callback(protocol->callback_arg, EVENT_BASE, PROTOCOL_EVENT_STT, text->valuestring);
+}
+static void protocol_llm_handler(protocol_t *protocol, cJSON *root)
+{
+    // 获取emotion
+    cJSON *emotion = cJSON_GetObjectItem(root, "emotion");
+    if (!cJSON_IsString(emotion))
+    {
+        ESP_LOGW(TAG, "emotion is not a string");
+        return;
+    }
+    protocol->callback(protocol->callback_arg, EVENT_BASE, PROTOCOL_EVENT_LLM, emotion->valuestring);
+}
+static void protocol_tts_handler(protocol_t *protocol, cJSON *root)
+{
+    // 获取state
+    cJSON *state = cJSON_GetObjectItem(root, "state");
+    if (!cJSON_IsString(state))
+    {
+        ESP_LOGW(TAG, "state is not a string");
+        return;
+    }
+    if (strcmp(state->valuestring, "start") == 0)
+    {
+        // 发送事件
+        protocol->callback(protocol->callback_arg, EVENT_BASE, PROTOCOL_EVENT_TTS_START, NULL);
+    }
+    else if (strcmp(state->valuestring, "stop") == 0)
+    {
+        // 发送事件
+        protocol->callback(protocol->callback_arg, EVENT_BASE, PROTOCOL_EVENT_TTS_STOP, NULL);
+    }
+    else if (strcmp(state->valuestring, "sentence_start") == 0)
+    {
+        // 获取text
+        cJSON *text = cJSON_GetObjectItem(root, "text");
+        if (!cJSON_IsString(text))
+        {
+            ESP_LOGE(TAG, "text is not string");
+            return;
+        }
+        // 发送事件
+        protocol->callback(protocol->callback_arg, EVENT_BASE, PROTOCOL_EVENT_TTS_SENTENCE_START, text->valuestring);
     }
 }
-/* 处理文本帧(JSON)下行 */
-static void protocol_handle_text_frame(protocol_t *protocol,
-                                       const char *payload,
-                                       size_t len)
-{
-    cJSON *root = cJSON_ParseWithLength(payload, len);
-    if (!root) {
-        ESP_LOGE(TAG, "Failed to parse websocket json");
-        return;
-    }
 
-    cJSON *type_json = cJSON_GetObjectItem(root, "type");
-    if (!cJSON_IsString(type_json)) {
-        cJSON_Delete(root);
-        return;
-    }
-
-    const char *type = type_json->valuestring;
-
-    // 1) hello: 解析 session_id
-    if (strcmp(type, "hello") == 0) {
-        cJSON *session_json = cJSON_GetObjectItem(root, "session_id");
-        if (cJSON_IsString(session_json)) {
-            free(protocol->session_id);
-            protocol->session_id = strdup(session_json->valuestring);
-            ESP_LOGI(TAG, "Session id set to: %s", protocol->session_id);
-        }
-        protocol_dispatch_event(protocol, PROTOCOL_EVENT_HELLO, NULL);
-    }
-    // 2) stt: 语音识别结果
-    else if (strcmp(type, "stt") == 0) {
-        cJSON *text_json = cJSON_GetObjectItem(root, "text");
-        if (cJSON_IsString(text_json)) {
-            char *text = strdup(text_json->valuestring);
-            // 上层用完需要 free(text)
-            protocol_dispatch_event(protocol, PROTOCOL_EVENT_STT, text);
-        }
-    }
-    // 3) llm: 大模型文字回复
-    else if (strcmp(type, "llm") == 0) {
-        cJSON *text_json = cJSON_GetObjectItem(root, "text");
-        if (cJSON_IsString(text_json)) {
-            char *text = strdup(text_json->valuestring);
-            // 上层用完需要 free(text)
-            protocol_dispatch_event(protocol, PROTOCOL_EVENT_LLM, text);
-        }
-    }
-    // 4) tts: 文本转语音控制
-    else if (strcmp(type, "tts") == 0) {
-        cJSON *state_json = cJSON_GetObjectItem(root, "state");
-        if (cJSON_IsString(state_json)) {
-            const char *state = state_json->valuestring;
-            if (strcmp(state, "start") == 0) {
-                protocol_dispatch_event(protocol, PROTOCOL_EVENT_TTS_START, NULL);
-            } else if (strcmp(state, "sentence_start") == 0) {
-                cJSON *text_json = cJSON_GetObjectItem(root, "text");
-                if (cJSON_IsString(text_json)) {
-                    char *text = strdup(text_json->valuestring);
-                    // 上层用完需要 free(text)
-                    protocol_dispatch_event(protocol, PROTOCOL_EVENT_TTS_SENTENCE_START, text);
-                }
-            } else if (strcmp(state, "stop") == 0) {
-                protocol_dispatch_event(protocol, PROTOCOL_EVENT_TTS_STOP, NULL);
-            }
-        }
-    }
-
-    cJSON_Delete(root);
-}
-/* 处理二进制帧(音频)下行 */
-static void protocol_handle_binary_frame(protocol_t *protocol,
-                                         const void *payload,
-                                         size_t len)
-{
-    binary_data_t *audio = malloc(sizeof(binary_data_t));
-    if (!audio) {
-        ESP_LOGE(TAG, "No memory for binary_data_t");
-        return;
-    }
-
-    audio->data = malloc(len);
-    if (!audio->data) {
-        ESP_LOGE(TAG, "No memory for audio buffer");
-        free(audio);
-        return;
-    }
-
-    memcpy(audio->data, payload, len);
-    audio->size = len;
-
-    // 上层用完需要 free(audio->data) + free(audio)
-    protocol_dispatch_event(protocol, PROTOCOL_EVENT_AUDIO, audio);
-}
-/* Websocket 事件回调：上下行核心 */
-static void protocol_ws_event_handler(void *handler_args,
-                                      esp_event_base_t base,
-                                      int32_t event_id,
-                                      void *event_data)
+static void protocol_ws_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     protocol_t *protocol = (protocol_t *)handler_args;
-
-    switch (event_id) {
-    case WEBSOCKET_EVENT_CONNECTED:
-        ESP_LOGI(TAG, "Websocket connected");
-        protocol_dispatch_event(protocol, PROTOCOL_EVENT_CONNECTED, NULL);
+    esp_websocket_event_data_t *data = (esp_websocket_event_data_t *)event_data;
+    switch (event_id)
+    {
+    case WEBSOCKET_EVENT_ERROR: /*!< This event occurs when there are any errors during execution */
+        ESP_LOGE(TAG, "WEBSOCKET_EVENT_ERROR");
         break;
-
-    case WEBSOCKET_EVENT_DISCONNECTED:
-        ESP_LOGW(TAG, "Websocket disconnected");
-        protocol_dispatch_event(protocol, PROTOCOL_EVENT_DISCONNECTED, NULL);
-        break;
-
-    case WEBSOCKET_EVENT_DATA: {
-        esp_websocket_event_data_t *data = (esp_websocket_event_data_t *)event_data;
-        // 文本帧 (JSON)
-        if (data->op_code == WS_TRANSPORT_OPCODES_TEXT) {
-            protocol_handle_text_frame(protocol, data->data_ptr, data->data_len);
-        }
-        // 二进制帧 (音频)
-        else if (data->op_code == WS_TRANSPORT_OPCODES_BINARY) {
-            protocol_handle_binary_frame(protocol, data->data_ptr, data->data_len);
+    case WEBSOCKET_EVENT_CONNECTED: /*!< Once the Websocket has been connected to the server, no data exchange has been performed */
+        ESP_LOGD(TAG, "WEBSOCKET_EVENT_CONNECTED");
+        if (protocol->callback)
+        {
+            protocol->callback(protocol->callback_arg, EVENT_BASE, PROTOCOL_EVENT_CONNECTED, NULL);
         }
         break;
-    }
-
-    case WEBSOCKET_EVENT_ERROR:
-        ESP_LOGE(TAG, "Websocket error");
-        // 看需要要不要通知上层，可以映射成 DISCONNECTED 之类
+    case WEBSOCKET_EVENT_DISCONNECTED: /*!< The connection has been disconnected */
+        ESP_LOGD(TAG, "WWEBSOCKET_EVENT_DISCONNECTED");
         break;
-
+    case WEBSOCKET_EVENT_DATA: /*!< When receiving data from the server, possibly multiple portions of the packet */
+        ESP_LOGD(TAG, "WEBSOCKET_EVENT_DATA");
+        if (!protocol->callback)
+        {
+            ESP_LOGW(TAG, "No callback registered");
+            break;
+        }
+        // 只处理二进制和文本
+        if (data->op_code != 0x01 && data->op_code != 0x02)
+        {
+            ESP_LOGD(TAG, "Unhandled data, opcode: %d", data->op_code);
+            break;
+        }
+        // 分辨是二进制还是文本
+        if (data->op_code == 0x02)
+        {
+            // 二进制数据，代表服务器发来的音频
+            binary_data_t audio_data = {.data = data->data_ptr, .size = data->data_len};
+            protocol->callback(protocol->callback_arg, EVENT_BASE, PROTOCOL_EVENT_AUDIO, &audio_data);
+            break;
+        }
+        // 文本数据
+        cJSON *root = cJSON_ParseWithLength(data->data_ptr, data->data_len);
+        if (!root)
+        {
+            ESP_LOGE(TAG, "JSON parse failed");
+            break;
+        }
+        cJSON *type = cJSON_GetObjectItem(root, "type");
+        if (!cJSON_IsString(type))
+        {
+            ESP_LOGE(TAG, "JSON type is not string");
+            cJSON_Delete(root);
+            break;
+        }
+        if (strcmp(type->valuestring, "hello") == 0)
+        {
+            // 处理hello信息
+            protocol_hello_handler(protocol, root);
+        }
+        else if (strcmp(type->valuestring, "llm") == 0)
+        {
+            // 处理llm信息
+            protocol_llm_handler(protocol, root);
+        }
+        else if (strcmp(type->valuestring, "stt") == 0)
+        {
+            // 处理stt信息
+            protocol_stt_handler(protocol, root);
+        }
+        else if (strcmp(type->valuestring, "tts") == 0)
+        {
+            // 处理tts信息
+            protocol_tts_handler(protocol, root);
+        }
+        cJSON_Delete(root);
+        break;
+    case WEBSOCKET_EVENT_CLOSED: /*!< The connection has been closed cleanly */
+        ESP_LOGD(TAG, "WEBSOCKET_EVENT_DATA");
+        break;
+    case WEBSOCKET_EVENT_BEFORE_CONNECT: /*!< The event occurs before connecting */
+        ESP_LOGD(TAG, "WEBSOCKET_EVENT_DATA");
+        break;
+    case WEBSOCKET_EVENT_BEGIN: /*!< The event occurs once after thread creation, before event loop */
+        ESP_LOGD(TAG, "WEBSOCKET_EVENT_DATA");
+        break;
+    case WEBSOCKET_EVENT_FINISH: /*!< The event occurs once after event loop, before thread destruction */
+        ESP_LOGD(TAG, "WEBSOCKET_EVENT_FINISH");
+        if (protocol->callback)
+        {
+            protocol->callback(protocol->callback_arg, EVENT_BASE, PROTOCOL_EVENT_DISCONNECTED, NULL);
+        }
+        break;
     default:
         break;
     }
 }
-protocol_t *protocol_create(const char *url, const char *token){
+
+protocol_t *protocol_create(const char *url, const char *token)
+{
     // 创建protocol
     protocol_t *protocol = (protocol_t *)object_create(sizeof(protocol_t));
     bsp_board_t *board = bsp_board_get_instance();
-      char *headers = NULL;
+
+    // 初始化websocket客户端, 添加protocol header
+    char *headers = NULL;
     asprintf(&headers, "Device-Id: %s\r\nClient-Id: %s\r\nAuthorization: Bearer %s\r\nProtocol-Version: 1\r\n",
              board->mac, board->uuid, token);
-    // 配置websocket客户端
     esp_websocket_client_config_t ws_config = {
         .uri = url,
         .headers = headers,
@@ -190,12 +219,14 @@ protocol_t *protocol_create(const char *url, const char *token){
     free(headers);
     return protocol;
 }
+
 void protocol_destroy(protocol_t *protocol)
 {
     esp_websocket_client_destroy(protocol->ws_client);
     free(protocol->session_id);
     free(protocol);
 }
+
 void protocol_connect(protocol_t *protocol)
 {
     if (esp_websocket_client_is_connected(protocol->ws_client))
@@ -209,6 +240,7 @@ void protocol_connect(protocol_t *protocol)
         ESP_LOGE(TAG, "esp_websocket_client_start failed: %s", esp_err_to_name(ret));
     }
 }
+
 void protocol_disconnect(protocol_t *protocol)
 {
     if (!esp_websocket_client_is_connected(protocol->ws_client))
@@ -222,23 +254,28 @@ void protocol_disconnect(protocol_t *protocol)
         ESP_LOGE(TAG, "esp_websocket_client_stop failed: %s", esp_err_to_name(ret));
     }
 }
+
 bool protocol_is_connected(protocol_t *protocol)
 {
     return esp_websocket_client_is_connected(protocol->ws_client);
 }
+
 void protocol_send_hello(protocol_t *protocol)
 {
     protocol_send_text(protocol, "{\"audio_params\":{\"channels\":%d,\"format\":\"opus\",\"frame_duration\":60,\"sample_rate\":%d},\"transport\":\"websocket\",\"type\":\"hello\",\"version\":1}", 1, CODEC_SAMPLE_RATE);
 }
+
 void protocol_send_wake_word(protocol_t *protocol, const char *wake_word)
 {
     protocol_send_text(protocol, "{\"session_id\":\"%s\",\"state\":\"detect\",\"text\":\"%s\",\"type\":\"listen\"}", protocol->session_id, wake_word);
 }
+
 void protocol_send_start_listening(protocol_t *protocol, protocol_listening_type_t type)
 {
     static const char *mode_str[] = {"auto", "manual", "realtime"};
     protocol_send_text(protocol, "{\"mode\":\"%s\",\"session_id\":\"%s\",\"state\":\"start\",\"type\":\"listen\"}", mode_str[type], protocol->session_id);
 }
+
 void protocol_send_stop_listening(protocol_t *protocol)
 {
     protocol_send_text(protocol, "{\"session_id\":\"%s\",\"state\":\"stop\",\"type\":\"listen\"}", protocol->session_id);

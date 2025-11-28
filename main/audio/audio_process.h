@@ -32,6 +32,7 @@ size_t audio_processor_read(audio_processor_t *processor, void *buffer, size_t s
  * @param buffer 数据缓存区
  * @param size 数据大小
  */
-void audio_processor_write(audio_processor_t *processor, void *buffer, size_t size);
+void audio_processor_write(audio_processor_t *processor, const void *buffer, size_t size);
 
 void audio_processor_register_callback(audio_processor_t *processor, audio_sr_event_t event, esp_event_handler_t callback, void *arg);
+void audio_processor_set_vad_state(audio_processor_t *processor, bool state);

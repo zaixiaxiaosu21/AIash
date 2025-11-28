@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include "esp_event.h"
 
-typedef struct protocol protocol_t; 
+typedef struct protocol protocol_t;
 
 typedef enum
 {
@@ -34,7 +34,7 @@ typedef enum
 
 typedef struct
 {
-    void *data;
+    const void *data;
     size_t size;
 } binary_data_t;
 
