@@ -104,7 +104,7 @@ void xiaozhi_display_init(void)
 #endif
 
     /* 背景色 */
-    lv_obj_set_style_bg_color(screen, lv_color_hex(0xD4D6DC), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(screen, lv_color_hex(0xFF0000), LV_PART_MAIN);
 
     /* 4.1 顶部提示标签 */
     tip_label = lv_label_create(screen);
@@ -126,7 +126,7 @@ void xiaozhi_display_init(void)
 
     /* 4.3 中间文本标签 */
     text_label = lv_label_create(screen);
-    lv_label_set_text(text_label, "尚硅谷AI小智项目");
+    lv_label_set_text(text_label, "STEFANIE");
     lv_obj_set_style_width(text_label, BSP_LCD_H_RES, LV_PART_MAIN);
     lv_obj_align_to(text_label, emoji_label, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
     lv_obj_set_style_text_color(text_label, lv_color_hex(0x000000), LV_PART_MAIN);

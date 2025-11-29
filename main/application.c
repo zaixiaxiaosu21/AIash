@@ -41,7 +41,57 @@ typedef struct
 } app_t;
 
 static app_t s_app;
+static void application_update_display(app_t *app)
+{
+    switch (app->state)
+    {
+    case APP_STATE_STARTING:
+        xiaozhi_display_tip("正在启动...");
+        xiaozhi_display_emoji("neutral");
+        xiaozhi_display_text("请稍候");
+        break;
 
+    case APP_STATE_ACTIVATING:
+        xiaozhi_display_tip("激活中...");
+        xiaozhi_display_emoji("thinking");
+        xiaozhi_display_text("请在手机上完成激活");
+        break;
+
+    case APP_STATE_IDLE:
+        xiaozhi_display_tip("已就绪");
+        xiaozhi_display_emoji("neutral");
+        xiaozhi_display_text("对我说：你好小智");
+        break;
+
+    case APP_STATE_CONNECTING:
+        xiaozhi_display_tip("正在连接服务器...");
+        xiaozhi_display_emoji("thinking");
+        xiaozhi_display_text("请稍候");
+        break;
+
+    case APP_STATE_WAKEUP:
+        xiaozhi_display_tip("唤醒成功");
+        xiaozhi_display_emoji("happy");
+        xiaozhi_display_text("请开始说话");
+        break;
+
+    case APP_STATE_LISTENING:
+        xiaozhi_display_tip("正在聆听...");
+        xiaozhi_display_emoji("thinking");
+        // 具体听到什么，在 STT 事件里更新 text
+        break;
+
+    case APP_STATE_SPEAKING:
+        xiaozhi_display_tip("正在回复...");
+        // emoji 后面在 LLM 事件里根据 emotion 再改
+        xiaozhi_display_emoji("cool");
+        // 具体说什么，在 TTS_SENTENCE_START 里更新 text
+        break;
+
+    default:
+        break;
+    }
+}
 // Forward declaration
 static void application_set_state(app_t *app, app_state_t state);
 
@@ -137,6 +187,7 @@ static void application_set_state(app_t *app, app_state_t state){
     }else{
         esp_timer_stop(app->wakeup_timer);
     }
+    application_update_display(app); //更新显示
 }
 static void application_upload_task(void *arg){
     app_t *s_app = (app_t *)arg;
@@ -182,9 +233,11 @@ static void application_protocol_callback(void* event_handler_arg,
         break;
     case PROTOCOL_EVENT_STT:
         ESP_LOGI(TAG, "User: %s", (char *)event_data);
+        xiaozhi_display_text((char *)event_data); //显示用户说的话
         break;
     case PROTOCOL_EVENT_LLM:
         ESP_LOGI(TAG, "Emotion: %s", (char *)event_data);
+        xiaozhi_display_emoji((char *)event_data);
         break;
     case PROTOCOL_EVENT_TTS_START:
         if (self->state == APP_STATE_WAKEUP)
@@ -196,6 +249,7 @@ static void application_protocol_callback(void* event_handler_arg,
         if (self->state==APP_STATE_SPEAKING)
         {
              ESP_LOGI(TAG, "Assistant: %s", (char *)event_data);
+              xiaozhi_display_text((char *)event_data);
         }
         break;
     case PROTOCOL_EVENT_TTS_STOP:
