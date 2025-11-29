@@ -88,9 +88,9 @@
         audio_sr_t *sr = (audio_sr_t *)malloc(sizeof(audio_sr_t));
         sr->output = output;
         srmodel_list_t *models = esp_srmodel_init("model");
-        afe_config_t *afe_config = afe_config_init("MR", models, AFE_TYPE_SR, AFE_MODE_HIGH_PERF);
+        afe_config_t *afe_config = afe_config_init("MR", models, AFE_TYPE_SR, AFE_MODE_LOW_COST);
         //打开回声消除
-        afe_config->aec_init = true;
+        afe_config->aec_init = false;
         sr->afe_handle= esp_afe_handle_from_config(afe_config);
         sr->afe_data= sr->afe_handle->create_from_config(afe_config);
         free(afe_config);//释放配置

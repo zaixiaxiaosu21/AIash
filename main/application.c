@@ -239,7 +239,7 @@ void application_init(void)
     bsp_board_wifi_init(board);
     bsp_board_codec_init(board);
     bsp_board_lcd_init(board);
-    lvgl_init_and_demo(board);
+    //lvgl_init_and_demo(board);
     if (bsp_board_check_status(board, BSP_BOARD_BUTTON_BIT|BSP_BOARD_CODEC_BIT|BSP_BOARD_LED_BIT|BSP_BOARD_LCD_BIT|BSP_BOARD_WIFI_BIT, portMAX_DELAY))
     {
         ESP_LOGI(TAG, "Board initialized successfully.");
@@ -277,7 +277,7 @@ void application_init(void)
     // 启动音频处理器
     audio_processor_start(s_app.audio_processor);
     // 启动后台上传任务
-    xTaskCreatePinnedToCoreWithCaps(application_upload_task, "upload_task", 2048, &s_app, 6, NULL, 0, MALLOC_CAP_SPIRAM);
+    xTaskCreatePinnedToCoreWithCaps(application_upload_task, "upload_task", 4096, &s_app, 6, NULL, 0, MALLOC_CAP_SPIRAM);
     //初始关闭vad
     audio_processor_set_vad_state(s_app.audio_processor, false);
     //初始化定时器

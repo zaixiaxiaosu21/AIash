@@ -79,11 +79,22 @@ void audio_processor_stop(audio_processor_t *processor){
     audio_sr_stop(processor->sr);
 }
 size_t audio_processor_read(audio_processor_t *processor, void *buffer, size_t size){
-    size_t read_size = 0;
-    void* data = xRingbufferReceive(processor->enc_output, &read_size, portMAX_DELAY);
-    memcpy(buffer, data, read_size);
-    vRingbufferReturnItem(processor->enc_output, data);
-    return read_size;
+    
+
+
+     // 从enc_output读数据
+    size_t size_read = 0;
+    void *buf_read = xRingbufferReceive(processor->enc_output, &size_read, portMAX_DELAY);
+    if (size < size_read)
+    {
+        ESP_LOGW(TAG, "buffer size is not enough, request size: %u, actual size: %u", size, size_read);
+        size_read = size;
+    }
+
+    memcpy(buffer, buf_read, size_read);
+    vRingbufferReturnItem(processor->enc_output, buf_read);
+
+    return size_read;
 }
 void audio_processor_write(audio_processor_t *processor,const void *buffer, size_t size){
     xRingbufferSend(processor->dec_input, buffer, size, portMAX_DELAY);
