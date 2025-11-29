@@ -11,4 +11,5 @@ idf_component_register(SRCS "application.c" "main.c"
                        "audio/audio_process.c"
                        "protocol/ota.c"
                        "protocol/protocol.c"
+                       "display/xiaozhi_display.c"
                     INCLUDE_DIRS ".")

@@ -13,6 +13,9 @@
 #define BSP_BOARD_WIFI_BIT (1 << 3)
 #define BSP_BOARD_CODEC_BIT (1 << 4)
 #define BSP_BOARD_LCD_BIT (1 << 5)
+#define BSP_LCD_H_RES   240
+#define BSP_LCD_V_RES   320
+#define BSP_LCD_DRAW_BUF_HEIGHT  40 // 每次刷新40行
 typedef struct
 {
     EventGroupHandle_t board_status;

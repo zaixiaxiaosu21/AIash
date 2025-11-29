@@ -5,7 +5,7 @@
 #include "bsp/bsp_board.h"
 #include "esp_log.h"
 #include "esp_timer.h"
-
+#include "display/xiaozhi_display.h"
 #define TAG "Application"
 
 static const char *state_str[] =
@@ -239,7 +239,7 @@ void application_init(void)
     bsp_board_wifi_init(board);
     bsp_board_codec_init(board);
     bsp_board_lcd_init(board);
-    //lvgl_init_and_demo(board);
+    xiaozhi_display_init();
     if (bsp_board_check_status(board, BSP_BOARD_BUTTON_BIT|BSP_BOARD_CODEC_BIT|BSP_BOARD_LED_BIT|BSP_BOARD_LCD_BIT|BSP_BOARD_WIFI_BIT, portMAX_DELAY))
     {
         ESP_LOGI(TAG, "Board initialized successfully.");

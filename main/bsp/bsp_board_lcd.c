@@ -6,9 +6,7 @@
 #include "esp_lcd_panel_ops.h"
 #include "lvgl.h"
 #include "esp_lvgl_port.h"
-#define BSP_LCD_H_RES   240
-#define BSP_LCD_V_RES   320
-#define BSP_LCD_DRAW_BUF_HEIGHT  40 // 每次刷新40行
+
  
 
 #define LCD_HOST SPI2_HOST//esp32s3 only support SPI2_HOST and SPI3_HOST for LCD
@@ -21,7 +19,7 @@ static void bsp_board_bk_init(bsp_board_t *board){
         .intr_type = GPIO_INTR_DISABLE,
  };
    ESP_ERROR_CHECK(gpio_config(&bk_config));
-   ESP_ERROR_CHECK(gpio_set_level(LCD_PIN_BK_LIGHT, 0));// 关闭背光
+   ESP_ERROR_CHECK(gpio_set_level(LCD_PIN_BK_LIGHT, 1));// 关闭背光
 }
 static void bsp_board_spi_init(bsp_board_t *board){
        spi_bus_config_t bus_config = {
@@ -79,7 +77,7 @@ void bsp_board_lcd_init(bsp_board_t *board)
     xEventGroupSetBits(board->board_status, BSP_BOARD_LCD_BIT);
 
     // 开启LCD
-    esp_lcd_panel_disp_on_off(board->lcd_panel, false);
+    esp_lcd_panel_disp_on_off(board->lcd_panel, true);
 
 }
 
