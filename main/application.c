@@ -38,6 +38,7 @@ typedef struct
 
     // 唤醒超时定时器
     esp_timer_handle_t wakeup_timer;
+    esp_timer_handle_t lvgl_timer;
 } app_t;
 
 static app_t s_app;
@@ -270,6 +271,14 @@ static void application_protocol_callback(void* event_handler_arg,
         break;
     }
 }
+static void application_lvgl_timer_cb(void *arg)
+{
+    //app_t *app = (app_t *)arg;
+    bsp_board_t *board = bsp_board_get_instance();
+    int wifi_rssi = bsp_board_wifi_get_rssi(board);
+    int bateery_soc = 100; //假设电量为100%
+    xiaozhi_display_update_status(bateery_soc, wifi_rssi); //更新显示
+}
 static void application_check_ota(app_t *app, ota_t *ota){
     while (1)
     {
@@ -354,5 +363,14 @@ void application_init(void)
         .skip_unhandled_events = true,
     };
     esp_timer_create(&wakeup_timer_args, &s_app.wakeup_timer);
+    //初始化lvgltimer
+     esp_timer_create_args_t update_timer_cfg = {
+        .callback = application_lvgl_timer_cb,
+        .arg = &s_app,
+        .skip_unhandled_events = true,
+        .name = "visual_timer",
+    };
+    esp_timer_create(&update_timer_cfg, &s_app.lvgl_timer);
+    esp_timer_start_periodic(s_app.lvgl_timer, 1000 * 1000);//每秒更新一次显示状态
     application_set_state(&s_app, APP_STATE_IDLE);
 }

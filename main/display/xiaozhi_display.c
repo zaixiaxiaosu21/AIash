@@ -245,7 +245,13 @@ void xiaozhi_display_update_status(int battery_soc, int wifi_rssi)
         FONT_AWESOME_BATTERY_THREE_QUARTERS, // 60% ~ 79%
         FONT_AWESOME_BATTERY_FULL,       // 80% ~ 100%
     };
-    const char *battery_icon = battery_socs[battery_soc / 20];
+    int index = battery_soc / 20; // 计算电池图标索引
+    if (index>4)
+    {
+        index = 4;
+    }
+    
+    const char *battery_icon = battery_socs[index];
 
     // 根据Wi-Fi信号强度选择Wi-Fi图标
     const char *wifi_icon;

@@ -107,84 +107,10 @@ static void btn_event_cb(lv_event_t * e)
     toggled = !toggled;
 }
 
- void lvgl_init_and_demo(bsp_board_t *board)
+ 
+
+void bsp_board_lcd_on(bsp_board_t *board)
 {
-    // 1. 初始化 LVGL port（你之前已经有这段）
-    lvgl_port_cfg_t lvgl_cfg = ESP_LVGL_PORT_INIT_CONFIG();
-    ESP_ERROR_CHECK(lvgl_port_init(&lvgl_cfg));
-
-    const lvgl_port_display_cfg_t disp_cfg = {
-        .io_handle     = board->lcd_io,
-        .panel_handle  = board->lcd_panel,
-        .buffer_size   = BSP_LCD_H_RES * BSP_LCD_DRAW_BUF_HEIGHT,  // 240 * 40
-        .double_buffer = true,
-
-        .hres          = BSP_LCD_H_RES,   // 240
-        .vres          = BSP_LCD_V_RES,   // 320
-        .monochrome    = false,
-
-        .rotation = {
-            .swap_xy  = false,
-            .mirror_x = false,
-            .mirror_y = false,
-        },
-
-        .flags = {
-            .buff_dma    = true,
-            .buff_spiram = false,
-        },
-    };
-
-    lv_display_t *disp = lvgl_port_add_disp(&disp_cfg);
-    (void)disp;
-
-    // 2. 取当前屏幕
-#if LVGL_VERSION_MAJOR >= 9
-    lv_obj_t *scr = lv_screen_active();
-#else
-    lv_obj_t *scr = lv_scr_act();
-#endif
-
-    // 可以让整个屏幕用列布局，看起来更整齐
-    lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(scr,
-                          LV_FLEX_ALIGN_CENTER,   // 主轴居中
-                          LV_FLEX_ALIGN_CENTER,   // 交叉轴居中
-                          LV_FLEX_ALIGN_CENTER);  // 行内对齐
-
-    // 3. 顶部标题
-    lv_obj_t *title = lv_label_create(scr);
-    lv_label_set_text(title, "ESP32-S3 + LVGL");
-    lv_obj_set_style_text_font(title, LV_FONT_DEFAULT, 0);
-
-    // 4. 一个按钮 + 按钮上的文字
-    lv_obj_t *btn = lv_btn_create(scr);
-    lv_obj_set_size(btn, 120, 40);
-    lv_obj_t *btn_label = lv_label_create(btn);
-    lv_label_set_text(btn_label, "Click me");
-    lv_obj_center(btn_label);
-
-    // 给按钮加个简单事件：点击变文字
-    lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_CLICKED, NULL);
-    
-
-    // 5. 一个滑条 + 数值显示
-    lv_obj_t *slider = lv_slider_create(scr);
-    lv_obj_set_width(slider, 180);
-    lv_slider_set_range(slider, 0, 100);
-    lv_slider_set_value(slider, 30, LV_ANIM_OFF);
-
-    lv_obj_t *slider_label = lv_label_create(scr);
-    lv_label_set_text(slider_label, "30");
-
-    // 滑动时更新数字
-    lv_obj_add_event_cb(slider, slider_event_cb, LV_EVENT_VALUE_CHANGED, slider_label);
-
-    // 6. 一个彩色条块，当“装饰”
-    lv_obj_t *color_bar = lv_obj_create(scr);
-    lv_obj_set_size(color_bar, 200, 40);
-    lv_obj_set_style_bg_color(color_bar, lv_color_hex(0x00AAFF), 0);
-    lv_obj_set_style_radius(color_bar, 8, 0);
-    lv_obj_set_style_border_width(color_bar, 0, 0);
+    esp_lcd_panel_disp_on_off(board->lcd_panel, true);
+    gpio_set_level(LCD_PIN_BK_LIGHT, 1);
 }
-
