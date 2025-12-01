@@ -6,6 +6,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "display/xiaozhi_display.h"
+#include "iot/speaker_thing.h"
 #define TAG "Application"
 #include "string.h"
 static const char *state_str[] =
@@ -35,7 +36,7 @@ typedef struct
     app_state_t state;
     protocol_t *protocol;
     audio_processor_t *audio_processor;
-
+     things_t *things;
     // 唤醒超时定时器
     esp_timer_handle_t wakeup_timer;
     esp_timer_handle_t lvgl_timer;
@@ -228,6 +229,8 @@ static void application_protocol_callback(void* event_handler_arg,
     case PROTOCOL_EVENT_HELLO:
          if (self->state==APP_STATE_CONNECTING)
          {
+            protocol_send_iot(self->protocol, PROTOCOL_IOT_TYPE_DESCRIPTOR, things_get_descriptor_json(self->things));
+            protocol_send_iot(self->protocol, PROTOCOL_IOT_TYPE_STATE, things_get_state_json(self->things));
             protocol_send_wake_word(self->protocol, "你好小智");
             application_set_state(self, APP_STATE_WAKEUP);
          }
@@ -266,6 +269,10 @@ static void application_protocol_callback(void* event_handler_arg,
             binary_data_t *audio_data = (binary_data_t *)event_data;
             audio_processor_write(self->audio_processor, audio_data->data, audio_data->size);
         }
+        break;
+    case PROTOCOL_EVENT_IOT: // event_data为cJSON*
+        ESP_LOGI(TAG, "Commands received");
+        things_invoke(self->things, (cJSON *)event_data);
         break;
     default:   
         break;
@@ -309,6 +316,7 @@ void application_init(void)
     if (payload[0])
     {
          xiaozhi_display_show_qrcode(payload, strlen(payload));
+         xiaozhi_display_tip("扫码配置WiFi");//显示二维码提示用户扫码
     }
     
     bsp_board_codec_init(board);
@@ -321,6 +329,8 @@ void application_init(void)
     }
     //删除二维码
     xiaozhi_display_delete_qrcode();
+    s_app.things = my_list_create();
+    my_list_add(s_app.things, speaker_thing_create());
     //注册按键回调
     iot_button_register_cb(board->front_button, BUTTON_SINGLE_CLICK,NULL,button_callback,NULL);
     iot_button_register_cb(board->front_button, BUTTON_DOUBLE_CLICK ,NULL,button_callback,NULL);

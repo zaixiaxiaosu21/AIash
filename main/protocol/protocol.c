@@ -32,7 +32,17 @@ struct protocol
     esp_event_handler_t callback;
     void *callback_arg;
 };
-
+static void protocol_iot_handler(protocol_t *protocol, cJSON *root)
+{
+    cJSON *commands = cJSON_GetObjectItem(root, "commands");
+    if (!cJSON_IsArray(commands))
+    {
+        ESP_LOGW(TAG, "commands is not an array");
+        return;
+    }
+    // 发送回调
+    protocol->callback(protocol->callback_arg, EVENT_BASE, PROTOCOL_EVENT_IOT, commands);
+}
 static void protocol_hello_handler(protocol_t *protocol, cJSON *root)
 {
     // 从JSON中获取session_id
@@ -69,6 +79,7 @@ static void protocol_llm_handler(protocol_t *protocol, cJSON *root)
     }
     protocol->callback(protocol->callback_arg, EVENT_BASE, PROTOCOL_EVENT_LLM, emotion->valuestring);
 }
+
 static void protocol_tts_handler(protocol_t *protocol, cJSON *root)
 {
     // 获取state
@@ -175,6 +186,11 @@ static void protocol_ws_event_handler(void *handler_args, esp_event_base_t base,
         {
             // 处理tts信息
             protocol_tts_handler(protocol, root);
+        }
+         else if (strcmp(type->valuestring, "iot") == 0)
+        {
+            // 处理iot信息
+            protocol_iot_handler(protocol, root);
         }
         cJSON_Delete(root);
         break;
@@ -296,7 +312,14 @@ void protocol_send_abort_speaking(protocol_t *protocol, protocol_abort_reason_t 
     static const char *reason_str[] = {"none", "wake_word_detected"};
     protocol_send_text(protocol, "{\"reason\":\"%s\",\"session_id\":\"%s\",\"type\":\"abort\"}", reason_str[reason], protocol->session_id);
 }
-
+void protocol_send_iot(protocol_t *protocol, protocol_iot_type_t type, cJSON *json)
+{
+    static const char *type_str[] = {"descriptors", "states"};
+    char *json_str = cJSON_PrintUnformatted(json);
+    cJSON_Delete(json);
+    protocol_send_text(protocol, "{\"session_id\":\"%s\",\"%s\":%s,\"type\":\"iot\",\"update\":true}", protocol->session_id, type_str[type], json_str);
+    free(json_str);
+}
 void protocol_register_callback(protocol_t *protocol, esp_event_handler_t callback, void *arg)
 {
     protocol->callback = callback;

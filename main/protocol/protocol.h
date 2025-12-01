@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "esp_event.h"
-
+#include "cJSON.h"
 typedef struct protocol protocol_t;
 
 typedef enum
@@ -17,8 +17,13 @@ typedef enum
     PROTOCOL_EVENT_TTS_SENTENCE_START, // event_data为char*
     PROTOCOL_EVENT_TTS_STOP,           // event_data为NULL
     PROTOCOL_EVENT_AUDIO,              // event_data为binary_data_t*
+     PROTOCOL_EVENT_IOT,  
 } protocol_event_t;
-
+typedef enum
+{
+    PROTOCOL_IOT_TYPE_DESCRIPTOR,
+    PROTOCOL_IOT_TYPE_STATE,
+} protocol_iot_type_t;
 typedef enum
 {
     LISTENING_TYPE_AUTO,
@@ -57,3 +62,5 @@ void protocol_send_abort_speaking(protocol_t *protocol, protocol_abort_reason_t 
 
 // 注册服务器回复处理函数
 void protocol_register_callback(protocol_t *protocol, esp_event_handler_t callback, void *arg);
+
+void protocol_send_iot(protocol_t *protocol, protocol_iot_type_t type, cJSON *json);
