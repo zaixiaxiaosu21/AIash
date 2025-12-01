@@ -45,7 +45,7 @@ void bsp_board_button_init(bsp_board_t *board);
 
 void bsp_board_nvs_init(bsp_board_t *board);
 
-void bsp_board_wifi_init(bsp_board_t *board);
+void bsp_board_wifi_init(bsp_board_t *board,char *payload, size_t payload_size);
 int bsp_board_wifi_get_rssi(bsp_board_t *board);
 
 void bsp_board_codec_init(bsp_board_t *board);

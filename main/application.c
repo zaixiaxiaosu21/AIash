@@ -7,7 +7,7 @@
 #include "esp_timer.h"
 #include "display/xiaozhi_display.h"
 #define TAG "Application"
-
+#include "string.h"
 static const char *state_str[] =
     {
         "STARTING",
@@ -280,6 +280,9 @@ static void application_check_ota(app_t *app, ota_t *ota){
          }
           application_set_state(app,APP_STATE_ACTIVATING);
           ESP_LOGI(TAG, "Activation code: %s", ota->activation_code); // 打印激活码
+          char buffer[100];
+          sprintf(buffer, "请在手机上使用激活码完成激活:\n%s", ota->activation_code);
+          xiaozhi_display_text(buffer);
           vTaskDelay(pdMS_TO_TICKS(5000));
     }
 }
@@ -290,16 +293,25 @@ void application_init(void)
     bsp_board_nvs_init(board);
     bsp_board_led_init(board);
     bsp_board_button_init(board);
-    bsp_board_wifi_init(board);
+     bsp_board_lcd_init(board);
+    xiaozhi_display_init(); //初始化显示
+     char payload[150] = {0};
+    bsp_board_wifi_init(board,payload, sizeof(payload));
+    if (payload[0])
+    {
+         xiaozhi_display_show_qrcode(payload, strlen(payload));
+    }
+    
     bsp_board_codec_init(board);
-    bsp_board_lcd_init(board);
-    xiaozhi_display_init();
+   
     if (bsp_board_check_status(board, BSP_BOARD_BUTTON_BIT|BSP_BOARD_CODEC_BIT|BSP_BOARD_LED_BIT|BSP_BOARD_LCD_BIT|BSP_BOARD_WIFI_BIT, portMAX_DELAY))
     {
         ESP_LOGI(TAG, "Board initialized successfully.");
     }else{
         ESP_LOGE(TAG, "Board initialization failed.");
     }
+    //删除二维码
+    xiaozhi_display_delete_qrcode();
     //注册按键回调
     iot_button_register_cb(board->front_button, BUTTON_SINGLE_CLICK,NULL,button_callback,NULL);
     iot_button_register_cb(board->front_button, BUTTON_DOUBLE_CLICK ,NULL,button_callback,NULL);

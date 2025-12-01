@@ -6,6 +6,7 @@
 #include "qrcode.h"
 #define TAG "[BSP] WiFi"
 #define SECURITY_KEY "abcd1234"
+
 static void event_handler(void *event_handler_arg,
                                          esp_event_base_t event_base,
                                          int32_t event_id,
@@ -35,7 +36,7 @@ static void event_handler(void *event_handler_arg,
 }
 }
 
-void bsp_board_wifi_init(bsp_board_t *board){
+void bsp_board_wifi_init(bsp_board_t *board,char *payload, size_t payload_size){
   bool res = bsp_board_check_status(board, BSP_BOARD_NVS_BIT, portMAX_DELAY);
     if (!res)
     {
@@ -75,7 +76,7 @@ void bsp_board_wifi_init(bsp_board_t *board){
     ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
      // 检查是否已经配网
     bool provisioned = false;
-    //wifi_prov_mgr_reset_provisioning();
+    wifi_prov_mgr_reset_provisioning();
     ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
     if (!provisioned)
     {
@@ -87,8 +88,8 @@ void bsp_board_wifi_init(bsp_board_t *board){
         snprintf(service_name, sizeof(service_name), "PROV_%02X%02X%02X", eth_mac[3], eth_mac[4], eth_mac[5]); // 将mac地址的最后三个字节作为服务名称
         wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, SECURITY_KEY, service_name, NULL);
         //获取二维码字符串
-         char payload[150];
-        snprintf(payload, sizeof(payload), "{\"ver\":\"v1\",\"name\":\"%s\",\"pop\":\"%s\",\"transport\":\"ble\"}", service_name, SECURITY_KEY);
+        
+        snprintf(payload, payload_size, "{\"ver\":\"v1\",\"name\":\"%s\",\"pop\":\"%s\",\"transport\":\"ble\"}", service_name, SECURITY_KEY);
 
         ESP_LOGI(TAG, "https://espressif.github.io/esp-jumpstart/qrcode.html?data=%s", payload);
         //生成qrcode

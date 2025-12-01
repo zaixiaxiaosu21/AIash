@@ -4,6 +4,7 @@
 #include "lvgl.h"
 #include "esp_log.h"
 #include "font_emoji.h"
+#include "font_awesome.h"
 #include  "string.h"
 
 #define TAG "xiaozhi_display"
@@ -23,8 +24,11 @@ lv_obj_t *qr;
 lv_obj_t *text_label;
 lv_obj_t *emoji_label;
 lv_obj_t *tip_label;
+lv_obj_t *battery_label;
+lv_obj_t *wifi_label;
 
 extern const lv_font_t font_puhui_20_4;
+extern const lv_font_t font_awesome_16_4;
 
 const xiaozhi_emoji_t emoji_list[21] = {
     {.name = "neutral",    .emoji = "😶"},
@@ -116,7 +120,7 @@ void xiaozhi_display_init(void)
     lv_obj_set_style_text_font(tip_label, &font_puhui_20_4, LV_PART_MAIN);
     lv_obj_set_style_bg_color(tip_label, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(tip_label, LV_OPA_COVER, LV_PART_MAIN);
-
+    
     /* 4.2 表情标签 */
     emoji_label = lv_label_create(screen);
     lv_label_set_text(emoji_label, "🙂");
@@ -132,6 +136,20 @@ void xiaozhi_display_init(void)
     lv_obj_set_style_text_color(text_label, lv_color_hex(0x000000), LV_PART_MAIN);
     lv_obj_set_style_text_align(text_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(text_label, &font_puhui_20_4, LV_PART_MAIN);
+
+    /* 4.4 电量图标 */
+    battery_label = lv_label_create(tip_label);
+    lv_label_set_text(battery_label, FONT_AWESOME_BATTERY_FULL);                      // 选择合适的电量图标（这里初始为满电）
+    lv_obj_align(battery_label, LV_ALIGN_LEFT_MID, 10, 0);                            // 左侧对齐
+    lv_obj_set_style_text_font(battery_label, &font_awesome_16_4, LV_PART_MAIN);      // 使用字体图标字体
+    lv_obj_set_style_text_color(battery_label, lv_color_hex(0x000000), LV_PART_MAIN); // 设置图标颜色
+
+    /* 4.5 Wi-Fi图标 */
+    wifi_label = lv_label_create(tip_label);
+    lv_label_set_text(wifi_label, FONT_AWESOME_WIFI);                              // 初始Wi-Fi状态，显示强信号图标
+    lv_obj_align(wifi_label, LV_ALIGN_RIGHT_MID, -10, 0);                          // 右侧对齐
+    lv_obj_set_style_text_font(wifi_label, &font_awesome_16_4, LV_PART_MAIN);      // 使用字体图标字体
+    lv_obj_set_style_text_color(wifi_label, lv_color_hex(0x000000), LV_PART_MAIN); // 设置图标颜色
 
     lvgl_port_unlock();
 }
@@ -205,5 +223,52 @@ void xiaozhi_display_delete_qrcode(void)
     lvgl_port_lock(0);
     lv_obj_del(qr);
     qr = NULL;
+    lvgl_port_unlock();
+}
+void xiaozhi_display_update_status(int battery_soc, int wifi_rssi)
+{
+    // 确保电量在0到100之间
+    if (battery_soc > 100)
+    {
+        battery_soc = 100;
+    }
+    if (battery_soc < 0)
+    {
+        battery_soc = 0;
+    }
+
+    // 根据电量百分比选择电池图标
+    static const char *battery_socs[] = {
+        FONT_AWESOME_BATTERY_EMPTY,      // 0% ~ 19%
+        FONT_AWESOME_BATTERY_QUARTER,    // 20% ~ 39%
+        FONT_AWESOME_BATTERY_HALF,       // 40% ~ 59%
+        FONT_AWESOME_BATTERY_THREE_QUARTERS, // 60% ~ 79%
+        FONT_AWESOME_BATTERY_FULL,       // 80% ~ 100%
+    };
+    const char *battery_icon = battery_socs[battery_soc / 20];
+
+    // 根据Wi-Fi信号强度选择Wi-Fi图标
+    const char *wifi_icon;
+    if (wifi_rssi >= 0)
+    {
+        wifi_icon = FONT_AWESOME_WIFI_SLASH;  // 无信号
+    }
+    else if (wifi_rssi < -70)
+    {
+        wifi_icon = FONT_AWESOME_WIFI_WEAK;   // 弱信号
+    }
+    else if (wifi_rssi < -50)
+    {
+        wifi_icon = FONT_AWESOME_WIFI_FAIR;   // 中等信号
+    }
+    else
+    {
+        wifi_icon = FONT_AWESOME_WIFI;        // 强信号
+    }
+
+    // 更新电池和Wi-Fi标签
+    lvgl_port_lock(0);
+    lv_label_set_text(battery_label, battery_icon);
+    lv_label_set_text(wifi_label, wifi_icon);
     lvgl_port_unlock();
 }
