@@ -80,16 +80,16 @@ void xiaozhi_display_init(void)
         .hres          = BSP_LCD_H_RES,  // 240
         .vres          = BSP_LCD_V_RES,  // 320
         .monochrome    = false,
-
+        .color_format = LV_COLOR_FORMAT_RGB565,
         .rotation = {
             .swap_xy  = false,
-            .mirror_x = false,
-            .mirror_y = false,
+            .mirror_x = true,
+            .mirror_y = true,
         },
 
         .flags = {
             .buff_dma    = true,
-            .buff_spiram = false,   // 你之前 SPI 版本是 false，就保持一致
+            .buff_spiram = true,   // 如果是 SPIRAM，则设置为 true
         },
     };
     lvgl_disp = lvgl_port_add_disp(&disp_cfg);
@@ -104,7 +104,7 @@ void xiaozhi_display_init(void)
 #endif
 
     /* 背景色 */
-    lv_obj_set_style_bg_color(screen, lv_color_hex(0xFF0000), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(screen, lv_color_hex(0xF0F0F0), LV_PART_MAIN);//浅灰
 
     /* 4.1 顶部提示标签 */
     tip_label = lv_label_create(screen);
@@ -177,23 +177,23 @@ void xiaozhi_display_emoji(char *emoji_name)
 /* 显示二维码 */
 void xiaozhi_display_show_qrcode(char *data, uint32_t data_len)
 {
-    // lvgl_port_lock(0);
+    lvgl_port_lock(0);
 
-    // lv_color_t bg_color = lv_palette_lighten(LV_PALETTE_LIGHT_BLUE, 5);
-    // lv_color_t fg_color = lv_palette_darken(LV_PALETTE_BLUE, 4);
+    lv_color_t bg_color = lv_palette_lighten(LV_PALETTE_LIGHT_BLUE, 5);
+    lv_color_t fg_color = lv_palette_darken(LV_PALETTE_BLUE, 4);
 
-    // qr = lv_qrcode_create(lv_screen_active());
-    // lv_qrcode_set_size(qr, 220);
-    // lv_qrcode_set_dark_color(qr, fg_color);
-    // lv_qrcode_set_light_color(qr, bg_color);
+    qr = lv_qrcode_create(lv_screen_active());
+    lv_qrcode_set_size(qr, 220);
+    lv_qrcode_set_dark_color(qr, fg_color);
+    lv_qrcode_set_light_color(qr, bg_color);
 
-    // lv_qrcode_update(qr, data, data_len);
-    // lv_obj_center(qr);
+    lv_qrcode_update(qr, data, data_len);
+    lv_obj_center(qr);
 
-    // lv_obj_set_style_border_color(qr, bg_color, 0);
-    // lv_obj_set_style_border_width(qr, 5, 0);
+    lv_obj_set_style_border_color(qr, bg_color, 0);
+    lv_obj_set_style_border_width(qr, 5, 0);
 
-    // lvgl_port_unlock();
+    lvgl_port_unlock();
 }
 
 /* 删除二维码 */

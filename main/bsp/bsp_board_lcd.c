@@ -52,7 +52,8 @@ static void bsp_board_spi_init(bsp_board_t *board){
 static void bsp_board_lcd_panel_init(bsp_board_t *board){
     esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = LCD_PIN_RST,
-        .color_space = LCD_RGB_ELEMENT_ORDER_BGR,
+        .color_space = LCD_RGB_ELEMENT_ORDER_RGB,
+        .data_endian = LCD_RGB_DATA_ENDIAN_LITTLE,
         .bits_per_pixel = 16,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_st7789(board->lcd_io, &panel_config, &board->lcd_panel));
