@@ -7,6 +7,7 @@
 #include "esp_timer.h"
 #include "display/xiaozhi_display.h"
 #include "iot/speaker_thing.h"
+#include "iot/light_thing.h"
 #define TAG "Application"
 #include "string.h"
 static const char *state_str[] =
@@ -331,6 +332,7 @@ void application_init(void)
     xiaozhi_display_delete_qrcode();
     s_app.things = my_list_create();
     my_list_add(s_app.things, speaker_thing_create());
+    my_list_add(s_app.things, light_thing_create());
     //注册按键回调
     iot_button_register_cb(board->front_button, BUTTON_SINGLE_CLICK,NULL,button_callback,NULL);
     iot_button_register_cb(board->front_button, BUTTON_DOUBLE_CLICK ,NULL,button_callback,NULL);

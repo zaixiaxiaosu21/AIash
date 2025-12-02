@@ -16,4 +16,5 @@ idf_component_register(SRCS "application.c" "main.c"
                        "iot/properties.c"
                        "iot/things.c"
                        "iot/speaker_thing.c"
+                       "iot/light_thing.c"
                     INCLUDE_DIRS ".")
