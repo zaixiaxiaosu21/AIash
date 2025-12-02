@@ -55,12 +55,15 @@ cJSON *methods_get_descriptor_json(methods_t *methods)
 
 void methods_invoke(methods_t *methods, cJSON *command)
 {      cJSON *method_name_json = cJSON_GetObjectItem(command, "method");
+    
+    
     if (!cJSON_IsString(method_name_json))
     {
         ESP_LOGE(TAG, "method name is not a string");
         return;
     }
-
+    //打印收到的命令json
+    ESP_LOGI(TAG, "Received command: %s", cJSON_Print(command));
     cJSON *parameters_json = cJSON_GetObjectItem(command, "parameters");
     if (!parameters_json)
     {

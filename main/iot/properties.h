@@ -6,8 +6,9 @@
 
 typedef enum{
     PROPERTY_TYPE_BOOLEAN,
-    PROPERTY_TYPE_STRING,
     PROPERTY_TYPE_NUMBER,
+    PROPERTY_TYPE_STRING,
+    
 }property_type_t;
 typedef union{
     bool boolean;

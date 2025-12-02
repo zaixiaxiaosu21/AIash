@@ -15,6 +15,7 @@ static void speaker_thing_set_volume_callback(void *arg, properties_t *parameter
     }
     bsp_board_t *board = bsp_board_get_instance();
     ESP_LOGI(TAG, "Set volume to %d", volume_parameter->value.number);
+
     ESP_ERROR_CHECK(esp_codec_dev_set_out_vol(board->codec_dev, volume_parameter->value.number));
 
     // 更新speaker_thing状态
@@ -53,7 +54,7 @@ static properties_t *speaker_properties_create(thing_t *speaker_thing)
 
     // 音量属性
     property_t *volume_property = property_create();
-    property_set(volume_property, "volume", "Volume level[0-100]", PROPERTY_TYPE_NUMBER, (property_value_t){.number = 40});
+    property_set(volume_property, "volume", "Volume level[0-100]", PROPERTY_TYPE_NUMBER, (property_value_t){.number = 60});
     my_list_add(properties, volume_property);
 
     return properties;
@@ -69,7 +70,7 @@ static methods_t *speaker_methods_create(thing_t *speaker_thing)
     // 创建参数列表
     properties_t *set_volume_parameters = my_list_create();
     property_t *volume_parameter = property_create();
-    property_set(volume_parameter, "volume", "Volume level[0-100]", PROPERTY_TYPE_NUMBER, (property_value_t){.number = 0});
+    property_set(volume_parameter, "volume", "Volume level[0-100]", PROPERTY_TYPE_NUMBER, (property_value_t){.number = 60});
     my_list_add(set_volume_parameters, volume_parameter);
 
     method_set(set_volume_method,
