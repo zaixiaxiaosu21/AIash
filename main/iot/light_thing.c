@@ -2,6 +2,8 @@
 #include "bsp/bsp_board.h"
 #include "esp_log.h"
 #include "led_strip.h"
+#include "protocol/protocol.h"
+#include "application.h"
 
 #define TAG "[IOT] Light"
 
@@ -31,6 +33,18 @@ static void light_thing_set_toggle_callback(void *arg, properties_t *parameters)
     thing_t *thing = (thing_t *)arg;
     property_t *toggle_property = properties_get_by_name(thing->properties, "toggle");
     toggle_property->value = toggle_parameter->value;
+    // 通知协议层更新状态
+      if (s_app.protocol && protocol_is_connected(s_app.protocol))
+    {
+        cJSON *state_json = things_get_state_json(s_app.things);
+        if (state_json)
+        {
+            protocol_send_iot(s_app.protocol, PROTOCOL_IOT_TYPE_STATE, state_json);
+            cJSON_Delete(state_json);
+            ESP_LOGI(TAG, "Light state synchronized to cloud");
+        }
+    }
+    
 }
 
 static properties_t *light_properties_create(thing_t *light_thing)

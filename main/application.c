@@ -21,29 +21,11 @@ static const char *state_str[] =
         "SPEAKING",
 };
 
-typedef enum
-{
-    APP_STATE_STARTING,
-    APP_STATE_ACTIVATING,
-    APP_STATE_IDLE,
-    APP_STATE_CONNECTING,
-    APP_STATE_WAKEUP,
-    APP_STATE_LISTENING,
-    APP_STATE_SPEAKING,
-} app_state_t;
 
-typedef struct
-{
-    app_state_t state;
-    protocol_t *protocol;
-    audio_processor_t *audio_processor;
-     things_t *things;
-    // 唤醒超时定时器
-    esp_timer_handle_t wakeup_timer;
-    esp_timer_handle_t lvgl_timer;
-} app_t;
 
-static app_t s_app;
+
+
+ app_t s_app;
 static void application_update_display(app_t *app)
 {
     switch (app->state)
